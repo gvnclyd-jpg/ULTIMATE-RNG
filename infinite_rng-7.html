@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INFINITE RNG — Ascension</title>
+<style>
+:root{
+  --bg:#05050b;--panel:rgba(16,16,31,.72);--line:rgba(255,255,255,.09);
+  --text:#f7f7ff;--muted:#8e90ad;--accent:#9b7cff;--rarity:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  min-height:100vh;overflow-x:hidden;color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+  background:
+    radial-gradient(circle at 50% -10%,rgba(112,72,255,.22),transparent 35%),
+    radial-gradient(circle at 0% 50%,rgba(0,210,255,.08),transparent 28%),
+    radial-gradient(circle at 100% 70%,rgba(255,0,183,.07),transparent 28%),#05050b;
+}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,#000,transparent 80%);z-index:-1}
+button,input{font:inherit}
+button{border:0}
+.header{
+  position:sticky;top:0;z-index:30;height:74px;padding:0 clamp(14px,4vw,42px);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(4,4,10,.72);border-bottom:1px solid var(--line);backdrop-filter:blur(20px);
+}
+.logo{font-size:24px;font-weight:1000;letter-spacing:4px;text-shadow:0 0 24px rgba(155,124,255,.35)}
+.logo span{background:linear-gradient(90deg,#8c7aff,#ff53d9,#42eaff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.stat{padding:9px 12px;border:1px solid var(--line);background:rgba(255,255,255,.045);border-radius:12px;font-size:12px;color:#c9c9dd}
+.stat b{color:white}
+.main{width:min(1220px,94%);margin:auto;padding:28px 0 70px}
+.hero{text-align:center;padding:18px 0 8px}
+.eyebrow{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:#8587a8}
+h1{font-size:clamp(34px,7vw,70px);line-height:.95;margin-top:10px;font-weight:1000;letter-spacing:-3px;background:linear-gradient(90deg,#fff,#b9aaff 40%,#fff 70%,#55eaff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.subtitle{margin:14px auto 0;max-width:650px;color:var(--muted);font-size:14px}
+.stage{position:relative;min-height:430px;display:grid;place-items:center;margin:18px 0}
+.stage-glow{position:absolute;width:min(600px,90vw);height:min(600px,90vw);border-radius:50%;background:conic-gradient(from 0deg,#ff3bd4,#5ef7ff,#8d72ff,#ff3bd4);filter:blur(90px);opacity:.13;animation:spin 14s linear infinite}
+.orb{
+  position:relative;width:290px;height:290px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle,rgba(255,255,255,.13),rgba(120,90,255,.06) 32%,transparent 68%);
+  box-shadow:0 0 35px rgba(145,102,255,.25),0 0 100px rgba(44,226,255,.12);
+  animation:float 3.8s ease-in-out infinite;isolation:isolate;
+}
+.orb:before,.orb:after{content:"";position:absolute;border-radius:50%;inset:-16px;border:1px solid rgba(137,116,255,.32);box-shadow:0 0 35px rgba(115,95,255,.12);animation:orbit 8s linear infinite}
+.orb:after{inset:-36px;border-color:rgba(68,226,255,.15);animation-duration:14s;animation-direction:reverse}
+.star-core{
+  position:absolute;width:126px;height:126px;z-index:2;
+  background:conic-gradient(#fff,#ff44da,#42efff,#8d6fff,#fff);
+  clip-path:polygon(50% 0%,61% 36%,100% 50%,61% 64%,50% 100%,39% 64%,0 50%,39% 36%);
+  filter:drop-shadow(0 0 16px #fff) drop-shadow(0 0 45px #c45cff);
+  animation:starFloat 2.5s ease-in-out infinite, hue 5s linear infinite;
+}
+.star-core:after{content:"";position:absolute;inset:18%;background:#fff;clip-path:inherit;filter:blur(4px);opacity:.7}
+.orb-text{position:relative;z-index:4;font-size:15px;font-weight:1000;letter-spacing:2px;text-shadow:0 2px 15px #000}
+.roll-button{
+  position:relative;z-index:5;min-width:270px;padding:17px 35px;border-radius:17px;cursor:pointer;
+  color:white;font-size:20px;font-weight:1000;letter-spacing:1px;
+  background:linear-gradient(120deg,#7257ff,#bd52ff 45%,#36dfff);
+  background-size:220% 220%;box-shadow:0 12px 45px rgba(111,76,255,.28),inset 0 1px rgba(255,255,255,.45);
+  transition:transform .18s,filter .18s,box-shadow .18s;animation:buttonShift 5s ease infinite;
+}
+.roll-button:before{content:"";position:absolute;inset:2px;border-radius:15px;border:1px solid rgba(255,255,255,.18);pointer-events:none}
+.roll-button:hover{transform:translateY(-3px) scale(1.015);filter:saturate(1.2);box-shadow:0 16px 55px rgba(111,76,255,.42)}
+.roll-button:active{transform:scale(.97)}
+.roll-button.cooldown{opacity:.45;cursor:not-allowed}
+.controls{text-align:center}
+.hint{margin-top:9px;color:#686a88;font-size:11px}
+.result{
+  position:relative;overflow:hidden;max-width:760px;min-height:112px;margin:26px auto 0;padding:20px 22px;
+  border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.025));
+  border:1px solid var(--line);backdrop-filter:blur(18px);box-shadow:0 20px 60px rgba(0,0,0,.25)
+}
+.result:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent);transform:translateX(-100%);animation:shine 4s ease infinite}
+.result-name{font-size:clamp(23px,4vw,35px);font-weight:1000;letter-spacing:-1px}
+.result-meta{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:7px}
+.badge{padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);font-size:11px}
+.result-rarity{font-weight:900}.result-chance{color:#888aa7}
+.dashboard{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:28px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:17px;backdrop-filter:blur(18px)}
+.panel-title{display:flex;align-items:center;justify-content:space-between;font-size:12px;text-transform:uppercase;letter-spacing:2px;color:#a4a5bf;margin-bottom:12px}
+.meter{height:8px;background:#090912;border-radius:99px;overflow:hidden}.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7b5cff,#ff4fd8,#45eaff);box-shadow:0 0 14px #a35cff;transition:width .5s}
+.statline{display:flex;justify-content:space-between;color:#9294b1;font-size:12px;padding:5px 0}.statline b{color:#fff}
+.searchbar{display:flex;gap:8px;margin-top:25px}
+.searchbar input{flex:1;min-width:0;padding:12px 14px;border-radius:13px;background:rgba(255,255,255,.05);border:1px solid var(--line);outline:none;color:white}
+.searchbar input:focus{border-color:rgba(156,124,255,.65);box-shadow:0 0 0 3px rgba(156,124,255,.1)}
+.filter{padding:12px 14px;border-radius:13px;background:rgba(255,255,255,.05);color:#ddd;border:1px solid var(--line);cursor:pointer}
+.collection-head{display:flex;justify-content:space-between;align-items:center;margin:28px 0 12px}.collection-head h2{font-size:22px}.collection-count{font-size:12px;color:#777a99}
+.collection{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.card{position:relative;overflow:hidden;min-height:112px;padding:15px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);transition:.22s}
+.card:hover{transform:translateY(-4px);background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);box-shadow:0 14px 35px rgba(0,0,0,.22)}
+.card:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 100% 0,var(--card-color),transparent 55%);opacity:.08}
+.card-name{position:relative;font-size:13px;font-weight:900;line-height:1.25}.card-rarity{position:relative;font-size:11px;color:#8d8fa9;margin-top:6px}.card-id{position:relative;font-size:10px;color:#555873;margin-top:9px}
+.progress{height:5px;margin-top:10px;border-radius:99px;background:#0c0c15;overflow:hidden}.progress div{height:100%;background:linear-gradient(90deg,#795cff,#e071ff);width:0%;transition:.4s}
+.empty{padding:30px;text-align:center;color:#666983;border:1px dashed var(--line);border-radius:16px;grid-column:1/-1}
+.message{position:fixed;top:88px;left:50%;z-index:100;transform:translate(-50%,-20px);opacity:0;pointer-events:none;padding:12px 17px;border-radius:13px;background:rgba(12,12,22,.95);border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.35);transition:.35s}.message.show{opacity:1;transform:translate(-50%,0)}
+.aura-effect{position:fixed;inset:0;z-index:7;pointer-events:none;opacity:0;mix-blend-mode:screen;overflow:hidden}.aura-effect.active{opacity:1}
+.aura-ring{position:absolute;left:50%;top:50%;width:120px;height:120px;border-radius:50%;border:2px solid var(--rarity);transform:translate(-50%,-50%);box-shadow:0 0 30px var(--rarity),inset 0 0 30px var(--rarity);opacity:.25;animation:auraPulse 3s ease-out infinite}
+#particles{position:fixed;inset:0;z-index:4;pointer-events:none}
+.reveal-overlay{position:fixed;inset:0;z-index:80;background:#000;display:flex;align-items:center;justify-content:center;visibility:hidden;opacity:0;pointer-events:none;overflow:hidden}
+.reveal-overlay.active{visibility:visible;opacity:1}.reveal-scene{position:relative;width:100%;height:100%;display:grid;place-items:center}
+.reveal-scene:before{content:"";position:absolute;width:45vmin;height:45vmin;border-radius:50%;background:var(--rarity-color);filter:blur(100px);opacity:.12;animation:nebula 4s ease-in-out infinite}
+.reveal-star{position:absolute;width:18px;height:18px;background:var(--rarity-color);clip-path:polygon(50% 0,61% 36%,100% 50%,61% 64%,50% 100%,39% 64%,0 50%,39% 36%);filter:drop-shadow(0 0 12px var(--rarity-color));opacity:0;transform:scale(0)}
+.reveal-overlay.play .reveal-star{animation:revealStar var(--star-time) cubic-bezier(.12,.78,.16,1) forwards}
+.reveal-ring{position:absolute;width:20px;height:20px;border-radius:50%;border:2px solid var(--rarity-color);box-shadow:0 0 30px var(--rarity-color),inset 0 0 25px var(--rarity-color);opacity:0}
+.reveal-overlay.play .reveal-ring{animation:revealRing var(--ring-time) cubic-bezier(.12,.78,.16,1) forwards}
+.reveal-rays{position:absolute;left:50%;top:50%;width:0;height:0}.ray{position:absolute;width:2px;height:var(--len);background:linear-gradient(var(--rarity-color),transparent);transform-origin:50% 100%;opacity:0;box-shadow:0 0 12px var(--rarity-color)}
+.reveal-overlay.play .ray{animation:ray var(--ray-time) cubic-bezier(.12,.78,.16,1) forwards;animation-delay:var(--delay)}
+.reveal-name,.reveal-rarity{position:absolute;left:50%;text-align:center;transform:translateX(-50%);opacity:0;text-shadow:0 4px 35px #000}
+.reveal-name{top:58%;font-size:clamp(27px,5vw,58px);font-weight:1000;letter-spacing:-2px;white-space:nowrap}
+.reveal-rarity{top:68%;font-size:14px;letter-spacing:4px;text-transform:uppercase;color:var(--rarity-color);font-weight:900}
+.reveal-overlay.play .reveal-name{animation:textIn .9s cubic-bezier(.16,1,.3,1) 1.75s forwards}
+.reveal-overlay.play .reveal-rarity{animation:textIn .8s cubic-bezier(.16,1,.3,1) 2s forwards}
+.skip{position:absolute;right:18px;bottom:18px;color:#6e708c;font-size:11px;letter-spacing:1px}
+@keyframes float{50%{transform:translateY(-9px)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes orbit{to{transform:rotate(360deg)}}@keyframes hue{to{filter:hue-rotate(360deg) drop-shadow(0 0 20px #fff)}}@keyframes starFloat{50%{transform:scale(1.08) rotate(22deg)}}@keyframes buttonShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}@keyframes shine{55%,100%{transform:translateX(100%)}}@keyframes auraPulse{0%{transform:translate(-50%,-50%) scale(.3);opacity:.6}100%{transform:translate(-50%,-50%) scale(7);opacity:0}}@keyframes nebula{50%{transform:scale(1.35);opacity:.22}}@keyframes revealStar{0%{opacity:0;transform:scale(0) rotate(0)}25%{opacity:1;transform:scale(var(--star-scale)) rotate(180deg)}65%{transform:scale(calc(var(--star-scale)*.72)) rotate(360deg)}100%{opacity:1;transform:scale(calc(var(--star-scale)*.9)) rotate(540deg)}}@keyframes revealRing{0%{opacity:0;transform:scale(0)}25%{opacity:.95;transform:scale(.5)}100%{opacity:.35;transform:scale(var(--ring-scale))}}@keyframes ray{0%{opacity:0;transform:rotate(var(--rot)) scaleY(0)}35%{opacity:1}100%{opacity:0;transform:rotate(var(--rot)) scaleY(1)}}@keyframes textIn{from{opacity:0;transform:translate(-50%,18px) scale(.96);filter:blur(8px)}to{opacity:1;transform:translate(-50%,0) scale(1);filter:blur(0)}}@keyframes shakeRare{0%,100%{transform:translate(0)}25%{transform:translate(3px,-2px)}50%{transform:translate(-3px,2px)}75%{transform:translate(2px,1px)}}
+.rare-shake{animation:shakeRare .12s 4}
+@media(max-width:760px){.dashboard{grid-template-columns:1fr}.header{height:auto;min-height:70px;padding:12px}.logo{font-size:19px}.stats{max-width:55%}.orb{width:245px;height:245px}.stage{min-height:370px}.roll-button{min-width:230px}.collection{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.reveal-name{max-width:92%;white-space:normal}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+
+.challenge-hub{margin-top:70px;padding:30px 0 0}
+.challenge-title{text-align:center;margin-bottom:25px}
+.challenge-title h2{font-size:clamp(28px,5vw,48px);letter-spacing:-2px;margin:8px 0}
+.challenge-title p{color:#777a98;font-size:13px}
+.challenge-status{max-width:720px;margin:0 auto 18px;padding:15px 17px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.035)}
+.challenge-status>div:first-child{display:flex;justify-content:space-between;color:#8b8da8;font-size:11px;letter-spacing:1px}.challenge-status b{color:#fff}
+.challenge-track,.challenge-meter{height:6px;background:#0b0b13;border-radius:99px;overflow:hidden;margin-top:10px}
+.challenge-track i,.challenge-meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#775cff,#ff4fd8,#48eaff);box-shadow:0 0 15px #9c5cff;transition:width .5s}
+.challenges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.challenge-card{position:relative;overflow:hidden;min-height:230px;padding:20px;border-radius:20px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(145deg,rgba(255,255,255,.06),rgba(255,255,255,.02));transition:.25s}
+.challenge-card.active{border-color:rgba(150,115,255,.4);box-shadow:0 0 45px rgba(115,80,255,.08)}
+.challenge-card:hover:not(.locked){transform:translateY(-3px)}
+.challenge-card.locked{filter:saturate(.25);opacity:.5}
+.challenge-card.completed{border-color:rgba(71,255,165,.38);background:linear-gradient(145deg,rgba(71,255,165,.08),rgba(255,255,255,.02))}
+.challenge-num{position:absolute;right:17px;top:13px;font-size:45px;font-weight:1000;color:rgba(255,255,255,.045)}
+.challenge-copy{position:relative;z-index:1}.challenge-kicker{font-size:10px;letter-spacing:2px;color:#7f82a0}.challenge-card h3{font-size:22px;margin:6px 0}.challenge-card p{font-size:12px;color:#7f819c;line-height:1.55;max-width:430px}
+.challenge-meta,.click-stats,.rng-tries{display:flex;justify-content:space-between;align-items:center;margin-top:15px;font-size:12px;color:#8c8ea8}.challenge-meta b{color:#55efa0}
+.rps-score{display:flex;gap:25px;margin-top:15px;color:#8c8ea8;font-size:12px}.rps-score b{font-size:20px;color:#fff;margin-left:5px}
+.rps-buttons{display:flex;gap:8px;margin-top:12px}.rps-buttons button{width:52px;height:44px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);cursor:pointer;font-size:21px;transition:.15s}.rps-buttons button:hover{transform:translateY(-2px);background:rgba(145,115,255,.18)}
+.challenge-action{margin-top:15px;padding:11px 16px;border-radius:11px;color:#fff;background:linear-gradient(100deg,#755cff,#bd4fff);font-weight:900;cursor:pointer;box-shadow:0 7px 25px rgba(120,80,255,.18)}
+.challenge-action:disabled{opacity:.35;cursor:not-allowed}.key-button{background:linear-gradient(100deg,#ffc642,#ff8b32);color:#170d00}
+.challenge-message{margin-top:10px;font-size:11px;color:#727590;min-height:16px}
+.divine-overlay,.credits-overlay{position:fixed;inset:0;z-index:200;background:#020204;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;pointer-events:none}
+.divine-overlay.show,.credits-overlay.show{opacity:1;visibility:visible;pointer-events:auto}
+.divine-flicker{position:absolute;inset:0;background:radial-gradient(circle,#fff 0,#fff 3%,#f00 4%,#200 12%,#000 45%);animation:flicker 2.8s steps(1) forwards}
+.divine-light{position:absolute;width:100px;height:100px;border-radius:50%;background:#ffe86b;box-shadow:0 0 30px #fff,0 0 90px #ffd21f,0 0 220px #ffad00;animation:divineLight 3.6s cubic-bezier(.16,1,.3,1) forwards}
+.divine-word,.divine-name,.divine-sub{position:absolute;text-align:center;opacity:0}
+.divine-word{top:29%;font-size:12px;letter-spacing:8px;color:#ffe55b;animation:divineText 1s 2s forwards}
+.divine-name{top:43%;font-size:clamp(35px,8vw,90px);font-weight:1000;letter-spacing:-3px;background:linear-gradient(90deg,#fff,#ffe76a,#fff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 50px #ffd21f;animation:divineText 1.2s 2.3s forwards}
+.divine-sub{top:58%;font-size:11px;letter-spacing:4px;color:#77788c;animation:divineText 1s 3s forwards}
+.credits-overlay{background:radial-gradient(circle at 50% 35%,#171126,#020204 55%)}
+.credits-inner{text-align:center;max-width:620px;padding:30px;animation:creditsIn 1.5s cubic-bezier(.16,1,.3,1) forwards}
+.credits-small{letter-spacing:6px;font-size:11px;color:#767991}.credits-inner h2{font-size:clamp(42px,9vw,100px);margin:10px 0;background:linear-gradient(90deg,#fff,#ffe56a,#b79cff,#fff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.credits-inner p{font-size:15px;line-height:2;color:#9b9db5}.credits-line{height:1px;background:linear-gradient(90deg,transparent,#ffe56a,transparent);margin:28px 0}.credits-inner span{font-size:10px;letter-spacing:3px;color:#6f7188}.credits-inner button{display:block;margin:28px auto 0;padding:11px 18px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#aaa;cursor:pointer}
+@keyframes flicker{0%,8%,12%,20%,26%,36%,45%{opacity:0}4%,10%,18%,29%,42%{opacity:.9}50%{opacity:.25}58%{opacity:.7}70%,100%{opacity:0}}
+@keyframes divineLight{0%{transform:scale(0);opacity:0}45%{transform:scale(1);opacity:.9}70%{transform:scale(2.8);opacity:.8}100%{transform:scale(10);opacity:0}}
+@keyframes divineText{from{opacity:0;transform:translateY(18px);filter:blur(8px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes creditsIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+@media(max-width:760px){.challenges{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+<header class="header">
+  <div class="logo">INFINITE<span>RNG</span></div>
+  <div class="stats">
+    <div class="stat">ROLLS <b id="rolls">0</b></div>
+    <div class="stat">FOUND <b id="found">0</b></div>
+    <div class="stat">BEST <b id="best">—</b></div>
+  </div>
+</header>
+
+<main class="main">
+  <section class="hero">
+    <div class="eyebrow">ASCENSION // 10,000 AURAS</div>
+    <h1>BREAK THE ODDS.</h1>
+    <p class="subtitle">A cinematic RNG experience where every roll generates a unique aura, color profile and reveal sequence. The higher the rarity, the more absurd the spectacle.</p>
+  </section>
+
+  <section class="stage">
+    <div class="stage-glow"></div>
+    <div class="orb" id="orb">
+      <div class="star-core"></div>
+      <div class="orb-text" id="orbText">READY</div>
+    </div>
+  </section>
+
+  <div class="controls">
+    <button class="roll-button" id="rollButton">✦ ROLL THE VOID</button>
+    <div class="hint">SPACE / ENTER to roll • each roll is independent • no real-money mechanics</div>
+  </div>
+
+  <section class="result" id="resultBox">
+    <div class="result-name" id="resultName">Awaiting your first aura…</div>
+    <div class="result-meta">
+      <span class="badge result-rarity" id="resultRarity">—</span>
+      <span class="badge result-chance" id="resultChance">10,000 possible auras</span>
+    </div>
+  </section>
+
+  <section class="dashboard">
+    <div class="panel">
+      <div class="panel-title"><span>Collection Progress</span><span id="percent">0.00%</span></div>
+      <div class="meter"><i id="collectionMeter"></i></div>
+      <div class="statline"><span>Discovered</span><b id="found2">0 / 10,000</b></div>
+      <div class="statline"><span>Current streak</span><b id="streak">0</b></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>Run Statistics</span><span>LIVE</span></div>
+      <div class="statline"><span>Highest rarity</span><b id="bestRarity">—</b></div>
+      <div class="statline"><span>Last roll</span><b id="lastRoll">—</b></div>
+      <div class="statline"><span>Roll velocity</span><b id="velocity">0 / min</b></div>
+    </div>
+  </section>
+
+  <div class="searchbar">
+    <input id="search" placeholder="Search your discovered auras…" autocomplete="off">
+    <button class="filter" id="filterBtn">ALL</button>
+  </div>
+
+  <div class="collection-head">
+    <h2>YOUR AURAS</h2><span class="collection-count" id="collectionCount">0 discovered</span>
+  </div>
+  <section class="collection" id="collection"><div class="empty">Your first aura is waiting in the dark.</div></section>
+
+<section class="challenge-hub" id="challengeHub">
+  <div class="challenge-title">
+    <div class="eyebrow">ENDGAME // 5 TRIALS</div>
+    <h2>THE DIVINE PATH</h2>
+    <p>Complete every trial. Failures have consequences. Only determination reaches the final aura.</p>
+  </div>
+
+  <div class="challenge-status">
+    <div><span>DIVINE PROGRESS</span><b id="challengeProgress">1 / 5</b></div>
+    <div class="challenge-track"><i id="challengeBar"></i></div>
+  </div>
+
+  <div class="challenges">
+    <article class="challenge-card active" id="challenge1">
+      <div class="challenge-num">01</div>
+      <div class="challenge-copy">
+        <div class="challenge-kicker">THE COLLECTION</div>
+        <h3>Get All The Auras</h3>
+        <p>Discover every one of the 10,000 auras. This is the gate to the Divine Path.</p>
+        <div class="challenge-meter"><i id="challengeCollectionMeter"></i></div>
+        <div class="challenge-meta"><span id="challengeCollectionText">0 / 10,000</span><b id="challenge1Status">IN PROGRESS</b></div>
+      </div>
+    </article>
+
+    <article class="challenge-card locked" id="challenge2">
+      <div class="challenge-num">02</div>
+      <div class="challenge-copy">
+        <div class="challenge-kicker">LUCK IS ON MY SIDE</div>
+        <h3>Rock • Paper • Scissors</h3>
+        <p>Three rounds against the bot. Win at least two rounds.</p>
+        <div class="rps-score"><span>You <b id="rpsYou">0</b></span><span>Bot <b id="rpsBot">0</b></span></div>
+        <div class="rps-buttons">
+          <button data-rps="rock">✊</button><button data-rps="paper">✋</button><button data-rps="scissors">✌️</button>
+        </div>
+        <div class="challenge-message" id="rpsMessage">Locked until all 10,000 auras are found.</div>
+      </div>
+    </article>
+
+    <article class="challenge-card locked" id="challenge3">
+      <div class="challenge-num">03</div>
+      <div class="challenge-copy">
+        <div class="challenge-kicker">A FIGHT WITH TIME</div>
+        <h3>100 Clicks • 25 Seconds</h3>
+        <p>Click 100 times before the timer reaches zero. Fail three times in a row and everything resets.</p>
+        <div class="click-stats"><b id="clickCount">0</b> / 100 <span id="clickTimer">25.0s</span></div>
+        <button class="challenge-action" id="clickStart">START THE CLOCK</button>
+        <div class="challenge-message" id="clickMessage">Locked until Challenge 2 is complete.</div>
+      </div>
+    </article>
+
+    <article class="challenge-card locked" id="challenge4">
+      <div class="challenge-num">04</div>
+      <div class="challenge-copy">
+        <div class="challenge-kicker">FINAL RNG</div>
+        <h3>The 1 in 10 Trial</h3>
+        <p>Ten attempts. One correct aura. Get it right and receive the Divine Key.</p>
+        <div class="rng-tries"><span>TRIES <b id="rng4Tries">0 / 10</b></span><span>ODDS <b>1 / 10</b></span></div>
+        <button class="challenge-action" id="rng4Button">ROLL THE TRIAL</button>
+        <div class="challenge-message" id="rng4Message">Locked until Challenge 3 is complete.</div>
+      </div>
+    </article>
+
+    <article class="challenge-card locked" id="challenge5">
+      <div class="challenge-num">05</div>
+      <div class="challenge-copy">
+        <div class="challenge-kicker">DETERMINATION</div>
+        <h3>The 1 in 100 Aura</h3>
+        <p>Use your Divine Key. Ten tries. The correct aura is waiting at 1 in 100 odds.</p>
+        <div class="rng-tries"><span>TRIES <b id="rng5Tries">0 / 10</b></span><span>ODDS <b>1 / 100</b></span></div>
+        <button class="challenge-action key-button" id="keyButton">🔑 USE DIVINE KEY</button>
+        <div class="challenge-message" id="rng5Message">Locked until the Divine Key is earned.</div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<div class="divine-overlay" id="divineOverlay">
+  <div class="divine-flicker"></div>
+  <div class="divine-light"></div>
+  <div class="divine-word">DIVINE</div>
+  <div class="divine-name">DETERMINATION</div>
+  <div class="divine-sub">THE ODDS WERE NEVER THE END</div>
+</div>
+
+<div class="credits-overlay" id="creditsOverlay">
+  <div class="credits-inner">
+    <div class="credits-small">INFINITE RNG</div>
+    <h2>DETERMINATION</h2>
+    <p>You found every aura.<br>You broke every trial.<br>You refused to give up.</p>
+    <div class="credits-line"></div>
+    <span>THE DIVINE PATH — COMPLETE</span>
+    <button id="creditsClose">RETURN TO THE VOID</button>
+  </div>
+</div>
+
+</main>
+
+<div class="message" id="message"></div>
+<div class="aura-effect" id="auraEffect"><div class="aura-ring"></div></div>
+
+<div class="reveal-overlay" id="revealOverlay">
+  <div class="reveal-scene">
+    <div class="reveal-rays" id="revealRays"></div>
+    <div class="reveal-ring" id="revealRing"></div>
+    <div class="reveal-star" id="revealStar"></div>
+    <div class="reveal-name" id="revealName"></div>
+    <div class="reveal-rarity" id="revealRarity"></div>
+    <div class="skip">CLICK / SPACE TO SKIP</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------------------
+   DATA: 10,000 procedural auras
+---------------------------- */
+const PREFIXES=[
+"Aetherion","Voidborn","Starforged","Eclipse","Astral","Celestia","Omniscient","Eternal","Seraphic","Mythic",
+"Radiant","Abyssal","Crimson","Frostborn","Thunderous","Infernal","Divine","Ancient","Galactic","Neon",
+"Glitched","Spectral","Oblivion","Prismatic","Arcane","Stellar","Hallowed","Golden","Silver","Omega",
+"Infinite","Forbidden","Dreamweaver","Nightfall","Electro","Chrono","Hyperion","Ascendant","Dreadnought","Empyrean",
+"Astralith","Luminary","Cataclysmic","Sovereign","Ethereal","Transcendent","Reality","Worldbreaker","Heavenfall","Starless",
+"Quantum","Solaris","Lunaris","Riftwalker","Everfrost","Tempest","Paragon","Afterglow","Bloodmoon","Skyshatter"
+];
+const CORES=[
+"Dominion","Genesis","Ascension","Annihilation","Sovereign","Eclipse","Singularity","Apocalypse","Seraph","Dragon",
+"Nova","Supernova","Nebula","Starheart","Soulfire","Rift","Paradox","Infinity","Destiny","Chaos",
+"Mirage","Overlord","Godcore","Voidheart","Astral Crown","Worldcore","Reality Shard","Cosmic Flame","Eternal Eye","Heavenstar",
+"Doomstar","Chronos","Hypernova","Event Horizon","Dimension","Galaxy","Starlight","Nightmare","Dreamcore","Origin",
+"Blackstar","Sunfire","Moonfall","Timebreak","Core","Cathedral","Halo","Fracture","Crown","Pulse"
+];
+const SUFFIXES=[
+"Prime","Ascended","Awakened","Reborn","Overdrive","Infinity","EX","MAX","Omega","Absolute",
+"Unleashed","Awakening","Eternal","Perfected","Supreme","Final","Beyond","Limitless","Unbound","Godfall",
+"V2","Zero","X","Ultra","Primeval","Infinite","Singularity","Paradox","Apex","Eternalized",
+"Hyper","Overclocked","Requiem","Rapture","Sovereign","Catalyst","Radiance","Aftermath","Zenith","Nexus"
+];
+
+const rarityTiers=[
+ {max:100,name:"COMMON",color:"#aeb4c2"},
+ {max:500,name:"UNCOMMON",color:"#55e98a"},
+ {max:1000,name:"RARE",color:"#55a8ff"},
+ {max:2500,name:"EPIC",color:"#a76cff"},
+ {max:5000,name:"LEGENDARY",color:"#ffc24d"},
+ {max:7500,name:"MYTHIC",color:"#ff4fc9"},
+ {max:9000,name:"DIVINE",color:"#ff5f70"},
+ {max:9700,name:"CELESTIAL",color:"#52f4ff"},
+ {max:9900,name:"TRANSCENDENT",color:"#ffffff"},
+ {max:9990,name:"IMPOSSIBLE",color:"#ffe05a"},
+ {max:9999,name:"???",color:"#ff4bff"},
+ {max:10000,name:"INFINITE",color:"#ffffff"}
+];
+
+const effects=[];
+for(let i=0;i<10000;i++){
+  const rarity=i+1;
+  const p=PREFIXES[Math.floor(i/200)%PREFIXES.length];
+  const c=CORES[Math.floor(i/7)%CORES.length];
+  const s=SUFFIXES[(i*13)%SUFFIXES.length];
+  effects.push({id:i,name:`${p} ${c} ${s}`,rarity});
+}
+const byId=Object.fromEntries(effects.map(e=>[e.id,e]));
+
+function rarityOf(n){return rarityTiers.find(t=>n<=t.max)||rarityTiers[rarityTiers.length-1]}
+function chanceText(n){
+  if(n<10000) return `1 in ${Math.max(1,Math.round(10000/n)).toLocaleString()}`;
+  return "1 in 10,000";
+}
+function colorFor(n){return rarityOf(n).color}
+
+/* Harder RNG: heavily biases toward the low end. */
+function generateRoll(){
+  const u=Math.random();
+  const rarityIndex=Math.floor(Math.pow(u,8.2)*10000);
+  return effects[Math.min(9999,rarityIndex)];
+}
+
+/* ---------------------------
+   Persistence / state
+---------------------------- */
+const KEY="infinite_rng_ascension_v2";
+let state={rolls:0,found:[],best:0,streak:0,last:0,started:Date.now()};
+try{state={...state,...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{}
+state.found=Array.isArray(state.found)?state.found:[];
+const foundSet=new Set(state.found);
+
+function save(){state.found=[...foundSet];localStorage.setItem(KEY,JSON.stringify(state))}
+function tierIndex(n){return rarityTiers.findIndex(t=>n<=t.max)}
+function updateStats(){
+  $("rolls").textContent=state.rolls.toLocaleString();
+  $("found").textContent=foundSet.size.toLocaleString();
+  $("found2").textContent=`${foundSet.size.toLocaleString()} / 10,000`;
+  $("percent").textContent=(foundSet.size/100).toFixed(2)+"%";
+  $("collectionMeter").style.width=(foundSet.size/100)+"%";
+  $("best").textContent=state.best?rarityOf(state.best).name:"—";
+  $("bestRarity").textContent=state.best?`${rarityOf(state.best).name} • #${state.best.toLocaleString()}`:"—";
+  $("streak").textContent=state.streak.toLocaleString();
+  $("lastRoll").textContent=state.last?`#${state.last.toLocaleString()}`:"—";
+  const mins=Math.max(.1,(Date.now()-state.started)/60000);
+  $("velocity").textContent=(state.rolls/mins).toFixed(1)+" / min";
+}
+
+/* ---------------------------
+   DOM helpers
+---------------------------- */
+const $=id=>document.getElementById(id);
+const rollButton=$("rollButton"),orb=$("orb"),overlay=$("revealOverlay"),auraEffect=$("auraEffect");
+let rolling=false,filterMode="ALL",messageTimer=null,revealTimer=null;
+
+function showMessage(text){
+  const m=$("message");m.textContent=text;m.classList.add("show");
+  clearTimeout(messageTimer);messageTimer=setTimeout(()=>m.classList.remove("show"),2600);
+}
+
+/* ---------------------------
+   Canvas particles
+---------------------------- */
+const canvas=$("particles"),ctx=canvas.getContext("2d");
+let particles=[],raf=0;
+function resizeCanvas(){canvas.width=innerWidth*devicePixelRatio;canvas.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
+addEventListener("resize",resizeCanvas);resizeCanvas();
+function burstParticles(color,count=70,heavy=false){
+  const cx=innerWidth/2,cy=innerHeight/2;
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2,s=(heavy?2:1)*(2+Math.random()*7);
+    particles.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,size:1+Math.random()*4,color});
+  }
+}
+function particleLoop(){
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+  particles=particles.filter(p=>p.life>0);
+  for(const p of particles){
+    p.x+=p.vx;p.y+=p.vy;p.vx*=.985;p.vy*=.985;p.vy+=.015;p.life-=.012;
+    ctx.globalAlpha=Math.max(0,p.life)*.8;ctx.fillStyle=p.color;ctx.shadowBlur=14;ctx.shadowColor=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;ctx.shadowBlur=0;raf=requestAnimationFrame(particleLoop);
+}
+particleLoop();
+
+/* ---------------------------
+   Unique reveal recipe
+---------------------------- */
+function seeded(n){
+  let x=(n*1664525+1013904223)>>>0;
+  return ()=>{x=(x*1664525+1013904223)>>>0;return x/4294967296}
+}
+function revealResult(result){
+  clearTimeout(revealTimer);
+  const r=rarityOf(result.rarity),rand=seeded(result.id*97+state.rolls*7919+Math.floor(Math.random()*1e6));
+  const starScale=(8+rand()*14)*(result.rarity>9000?1.25:1);
+  const ringScale=10+rand()*22;
+  const starTime=(1.25+rand()*1.1).toFixed(2)+"s";
+  const ringTime=(1.6+rand()*1.4).toFixed(2)+"s";
+  const rayTime=(1.1+rand()*1.2).toFixed(2)+"s";
+  overlay.style.setProperty("--rarity-color",r.color);
+  overlay.style.setProperty("--star-scale",starScale);
+  overlay.style.setProperty("--ring-scale",ringScale);
+  overlay.style.setProperty("--star-time",starTime);
+  overlay.style.setProperty("--ring-time",ringTime);
+  overlay.style.setProperty("--ray-time",rayTime);
+  $("revealName").textContent=result.name;
+  $("revealRarity").textContent=`${r.name}  •  ${chanceText(result.rarity)}`;
+  $("revealName").style.color=result.rarity>=9900?"#fff":r.color;
+  $("revealRarity").style.color=r.color;
+  const rays=$("revealRays");rays.innerHTML="";
+  const count=Math.floor(14+rand()*26);
+  for(let i=0;i<count;i++){
+    const ray=document.createElement("div");ray.className="ray";
+    ray.style.setProperty("--len",(25+rand()*50)+"vh");
+    ray.style.setProperty("--rot",(i*360/count+rand()*8)+"deg");
+    ray.style.setProperty("--delay",(rand()*.35)+"s");
+    rays.appendChild(ray);
+  }
+  overlay.classList.remove("active","play");
+  void overlay.offsetWidth;
+  overlay.classList.add("active","play");
+  if(result.rarity>=9000){document.body.classList.add("rare-shake");setTimeout(()=>document.body.classList.remove("rare-shake"),600)}
+  burstParticles(r.color,result.rarity>=7500?150:80,result.rarity>=9000);
+  revealTimer=setTimeout(()=>{
+    overlay.classList.remove("active","play");
+    activateAura(result);
+  },Math.max(3600,parseFloat(starTime)*1000+2300));
+}
+function activateAura(result){
+  const r=rarityOf(result.rarity);
+  auraEffect.style.setProperty("--rarity",r.color);
+  auraEffect.classList.remove("active");void auraEffect.offsetWidth;auraEffect.classList.add("active");
+  setTimeout(()=>auraEffect.classList.remove("active"),result.rarity>=9000?5200:3000);
+}
+
+/* ---------------------------
+   Roll
+---------------------------- */
+function fakeText(){
+  const e=effects[Math.floor(Math.random()*Math.min(7000,effects.length))];
+  $("orbText").textContent=e.name.split(" ").slice(0,2).join(" ");
+}
+async function roll(){
+  if(rolling)return;
+  rolling=true;rollButton.classList.add("cooldown");rollButton.textContent="✦ CHANNELING…";
+  auraEffect.classList.remove("active");overlay.classList.remove("active","play");
+  orb.classList.add("rolling");
+  const start=performance.now();
+  const fake=setInterval(fakeText,55);
+  await new Promise(res=>setTimeout(res,1200));
+  clearInterval(fake);
+  const result=generateRoll();
+  state.rolls++;
+  state.last=result.rarity;
+  state.best=Math.max(state.best,result.rarity);
+  state.streak=foundSet.has(result.id)?state.streak+1:0;
+  const isNew=!foundSet.has(result.id);foundSet.add(result.id);
+  save();updateStats();renderCollection();
+  $("orbText").textContent="REVEAL";
+  orb.classList.remove("rolling");
+  $("resultName").textContent=result.name;
+  $("resultRarity").textContent=rarityOf(result.rarity).name;
+  $("resultRarity").style.color=colorFor(result.rarity);
+  $("resultChance").textContent=`${chanceText(result.rarity)} • Aura #${result.rarity.toLocaleString()}`;
+  revealResult(result);
+  if(isNew && result.rarity>=7500) showMessage(`✦ NEW ${rarityOf(result.rarity).name} AURA DISCOVERED!`);
+  else if(isNew) showMessage("✦ New aura discovered!");
+  else showMessage("Duplicate aura — the hunt continues.");
+  const elapsed=performance.now()-start;
+  setTimeout(()=>{rolling=false;rollButton.classList.remove("cooldown");rollButton.textContent="✦ ROLL THE VOID";$("orbText").textContent="READY"},Math.max(300,1500-elapsed));
+}
+
+/* ---------------------------
+   Collection UI
+---------------------------- */
+function renderCollection(){
+  const q=$("search").value.trim().toLowerCase();
+  let ids=[...foundSet].map(Number).sort((a,b)=>b-a);
+  if(filterMode==="RARE")ids=ids.filter(id=>byId[id].rarity>=7500);
+  if(filterMode==="NEWEST")ids=ids.sort((a,b)=>b-a);
+  ids=ids.filter(id=>!q||byId[id].name.toLowerCase().includes(q)||String(id+1).includes(q));
+  $("collectionCount").textContent=`${ids.length.toLocaleString()} shown • ${foundSet.size.toLocaleString()} discovered`;
+  const col=$("collection");
+  if(!ids.length){col.innerHTML='<div class="empty">No matching auras yet.</div>';return}
+  col.innerHTML=ids.slice(0,300).map(id=>{
+    const e=byId[id],r=rarityOf(e.rarity);
+    return `<article class="card" style="--card-color:${r.color}">
+      <div class="card-name" style="color:${r.color}">${escapeHtml(e.name)}</div>
+      <div class="card-rarity">${r.name} • ${chanceText(e.rarity)}</div>
+      <div class="card-id">AURA #${e.rarity.toLocaleString()}</div>
+      <div class="progress"><div style="width:${e.rarity/100}%"></div></div>
+    </article>`;
+  }).join("");
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+
+$("search").addEventListener("input",renderCollection);
+$("filterBtn").addEventListener("click",()=>{
+  filterMode=filterMode==="ALL"?"RARE":filterMode==="RARE"?"NEWEST":"ALL";
+  $("filterBtn").textContent=filterMode;renderCollection();
+});
+rollButton.addEventListener("click",roll);
+addEventListener("keydown",e=>{
+  if((e.code==="Space"||e.code==="Enter")&&!e.repeat){
+    if(overlay.classList.contains("active")){overlay.classList.remove("active","play");return}
+    e.preventDefault();roll();
+  }
+});
+overlay.addEventListener("click",()=>{if(overlay.classList.contains("active"))overlay.classList.remove("active","play")});
+
+updateStats();renderCollection();
+
+/* ---------------------------
+   DIVINE PATH / ENDGAME
+---------------------------- */
+const divineKey= "infinite_rng_divine_path_v1";
+let divineState={rps:false,click:false,rng4:false,key:false,rng5:false,clickFails:0,rng4Tries:0,rng5Tries:0,rpsRound:0,rpsYou:0,rpsBot:0};
+try{divineState={...divineState,...JSON.parse(localStorage.getItem(divineKey)||"{}")}}catch{}
+let clickTimerId=null,clickDeadline=0,clicks=0;
+
+function saveDivine(){localStorage.setItem(divineKey,JSON.stringify(divineState))}
+function collectionComplete(){return foundSet.size>=10000}
+function updateChallenges(){
+  const complete=collectionComplete();
+  $("challengeCollectionText").textContent=`${foundSet.size.toLocaleString()} / 10,000`;
+  $("challengeCollectionMeter").style.width=(foundSet.size/100)+"%";
+  $("challenge1Status").textContent=complete?"COMPLETE":"IN PROGRESS";
+  $("challenge1").classList.toggle("completed",complete);
+
+  const unlocked2=complete, unlocked3=divineState.rps, unlocked4=divineState.click, unlocked5=divineState.rng4;
+  setChallengeLock("challenge2",unlocked2,divineState.rps);
+  setChallengeLock("challenge3",unlocked3,divineState.click);
+  setChallengeLock("challenge4",unlocked4,divineState.rng4);
+  setChallengeLock("challenge5",unlocked5,divineState.rng5);
+
+  $("rpsMessage").textContent=unlocked2?(divineState.rps?"Challenge complete.":"Win 2 of 3 rounds."):"Locked until all 10,000 auras are found.";
+  $("clickMessage").textContent=unlocked3?(divineState.click?"Challenge complete.":`Failed ${divineState.clickFails}/3 consecutive times.`):"Locked until Challenge 2 is complete.";
+  $("rng4Message").textContent=unlocked4?(divineState.rng4?"Divine Key obtained.":`Find the correct aura before ${10-divineState.rng4Tries} tries run out.`):"Locked until Challenge 3 is complete.";
+  $("rng5Message").textContent=unlocked5?(divineState.rng5?"DETERMINATION AWAKENED.":"Ten tries. One chance at 1 in 100."):"Locked until the Divine Key is earned.";
+
+  $("rpsYou").textContent=divineState.rpsYou;
+  $("rpsBot").textContent=divineState.rpsBot;
+  $("rng4Tries").textContent=`${divineState.rng4Tries} / 10`;
+  $("rng5Tries").textContent=`${divineState.rng5Tries} / 10`;
+
+  const stage=divineState.rng5?5:divineState.rng4?4:divineState.click?3:divineState.rps?2:complete?2:1;
+  $("challengeProgress").textContent=`${stage} / 5`;
+  $("challengeBar").style.width=(stage/5*100)+"%";
+  if(divineState.rng5){$("challengeProgress").textContent="5 / 5 • COMPLETE";$("challengeBar").style.width="100%"}
+}
+function setChallengeLock(id,unlocked,done){
+  const el=$(id);el.classList.toggle("locked",!unlocked);el.classList.toggle("completed",done);
+}
+function resetEverything(reason){
+  clearInterval(clickTimerId);
+  state={rolls:0,found:[],best:0,streak:0,last:0,started:Date.now()};
+  foundSet.clear();save();
+  divineState={rps:false,click:false,rng4:false,key:false,rng5:false,clickFails:0,rng4Tries:0,rng5Tries:0,rpsRound:0,rpsYou:0,rpsBot:0};
+  saveDivine();updateStats();renderCollection();updateChallenges();
+  showMessage(reason||"THE PATH HAS BEEN RESET.");
+  scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+}
+
+/* Challenge 2 — exactly 3 rounds, win 2 */
+function rpsRound(choice){
+  if(!collectionComplete()||divineState.rps||divineState.rpsRound>=3)return;
+  const choices=["rock","paper","scissors"],bot=choices[Math.floor(Math.random()*3)];
+  divineState.rpsRound++;
+  if(choice!==bot){
+    const win=(choice==="rock"&&bot==="scissors")||(choice==="paper"&&bot==="rock")||(choice==="scissors"&&bot==="paper");
+    if(win)divineState.rpsYou++;else divineState.rpsBot++;
+  }
+  const msg=$("rpsMessage");
+  msg.textContent=`Round ${divineState.rpsRound}/3 • You: ${divineState.rpsYou} • Bot: ${divineState.rpsBot}`;
+  if(divineState.rpsRound===3){
+    if(divineState.rpsYou>=2){
+      divineState.rps=true;msg.textContent="✦ CHALLENGE 2 COMPLETE — luck is on your side.";
+    }else{
+      divineState.rpsRound=0;divineState.rpsYou=0;divineState.rpsBot=0;
+      msg.textContent="You lost the match. Restarting Challenge 2…";
+      setTimeout(()=>updateChallenges(),900);
+    }
+  }
+  saveDivine();updateChallenges();
+}
+document.querySelectorAll("[data-rps]").forEach(b=>b.addEventListener("click",()=>rpsRound(b.dataset.rps)));
+
+/* Challenge 3 — 100 clicks in 25 seconds; 3 consecutive failures reset ALL */
+function startClickChallenge(){
+  if(!divineState.rps||divineState.click)return;
+  clicks=0;clickDeadline=performance.now()+25000;
+  const btn=$("clickStart");btn.textContent="CLICK!";btn.disabled=false;
+  $("clickCount").textContent="0";$("clickTimer").textContent="25.0s";
+  btn.onclick=clickTick;
+  clearInterval(clickTimerId);
+  clickTimerId=setInterval(()=>{
+    const left=Math.max(0,clickDeadline-performance.now());
+    $("clickTimer").textContent=(left/1000).toFixed(1)+"s";
+    if(left<=0)failClick();
+  },50);
+}
+function clickTick(){
+  if(performance.now()>clickDeadline){failClick();return}
+  clicks++;$("clickCount").textContent=clicks;
+  if(clicks>=100){
+    clearInterval(clickTimerId);divineState.click=true;saveDivine();updateChallenges();
+    $("clickStart").textContent="CHALLENGE COMPLETE";$("clickStart").disabled=true;
+    showMessage("✦ 100 CLICKS. TIME COULD NOT CATCH YOU.");
+  }
+}
+function failClick(){
+  clearInterval(clickTimerId);divineState.clickFails++;
+  if(divineState.clickFails>=3){
+    resetEverything("THREE FAILURES. THE DIVINE PATH HAS ERASED YOUR PROGRESS.");
+    return;
+  }
+  $("clickStart").textContent="TRY AGAIN";$("clickStart").disabled=false;
+  $("clickStart").onclick=startClickChallenge;
+  $("clickMessage").textContent=`TIME RAN OUT. Consecutive failures: ${divineState.clickFails}/3.`;
+  $("clickTimer").textContent="25.0s";$("clickCount").textContent="0";
+  saveDivine();updateChallenges();
+}
+$("clickStart").onclick=startClickChallenge;
+
+/* Challenge 4 — 1 in 10, ten tries, failure returns to Challenge 3 */
+$("rng4Button").addEventListener("click",()=>{
+  if(!divineState.click||divineState.rng4)return;
+  divineState.rng4Tries++;
+  const success=Math.floor(Math.random()*10)===0;
+  if(success){
+    divineState.rng4=true;divineState.key=true;saveDivine();updateChallenges();
+    showMessage("🔑 DIVINE KEY OBTAINED.");
+    playKeyReveal();
+  }else if(divineState.rng4Tries>=10){
+    divineState.rng4Tries=0;divineState.click=false;divineState.clickFails=0;
+    saveDivine();updateChallenges();showMessage("FINAL RNG FAILED. RETURNING TO CHALLENGE 3.");
+  }else{saveDivine();updateChallenges();$("rng4Message").textContent=`Wrong aura. ${10-divineState.rng4Tries} tries remain.`}
+});
+
+/* Key animation: red/white flicker + shining yellow */
+function playKeyReveal(){
+  const old=document.getElementById("keyFlash");
+  if(old)old.remove();
+  const flash=document.createElement("div");flash.id="keyFlash";flash.className="divine-overlay show";
+  flash.innerHTML='<div class="divine-flicker"></div><div class="divine-light"></div><div class="divine-word">THE KEY</div><div class="divine-name">DIVINE KEY</div><div class="divine-sub">THE FINAL DOOR IS OPEN</div>';
+  document.body.appendChild(flash);
+  setTimeout(()=>flash.classList.remove("show"),4200);
+  setTimeout(()=>flash.remove(),4700);
+}
+
+/* Challenge 5 — 1 in 100, ten tries, total reset on failure */
+$("keyButton").addEventListener("click",()=>{
+  if(!divineState.key||divineState.rng5)return;
+  divineState.rng5Tries++;
+  const success=Math.floor(Math.random()*100)===0;
+  if(success){
+    divineState.rng5=true;saveDivine();updateChallenges();playDivineVictory();
+  }else if(divineState.rng5Tries>=10){
+    resetEverything("THE FINAL AURA ESCAPED. EVERYTHING HAS BEEN RESET.");
+  }else{
+    saveDivine();updateChallenges();
+    $("rng5Message").textContent=`The aura was wrong. ${10-divineState.rng5Tries} tries remain.`;
+  }
+});
+function playDivineVictory(){
+  const o=$("divineOverlay");o.classList.add("show");
+  setTimeout(()=>{o.classList.remove("show");$("creditsOverlay").classList.add("show")},6500);
+  setTimeout(()=>{$("creditsOverlay").classList.add("show")},6450);
+}
+$("creditsClose").addEventListener("click",()=>{$("creditsOverlay").classList.remove("show")});
+
+/* Keep challenge state synchronized after ordinary collection changes. */
+const oldUpdateStats=updateStats;
+updateStats=function(){oldUpdateStats();updateChallenges()};
+updateChallenges();
+
+</script>
+</body>
+</html>
